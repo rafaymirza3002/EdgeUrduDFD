@@ -1,0 +1,1 @@
+"""Urdu deepfake detection package."""
