@@ -7,11 +7,12 @@ name = "urdu-deepfake-detector"
 version = "0.1.0"
 description = "Modular Urdu audio deepfake detection FYP"
 requires-python = ">=3.11,<3.14"
+
 dependencies = [
   "numpy>=1.26,<3",
   "soundfile>=0.13,<1",
   "sounddevice>=0.5,<1",
-  "streamlit>=1.54,<2",
+  "streamlit==1.60.0",
 ]
 
 [project.optional-dependencies]
@@ -31,13 +32,13 @@ addopts = "-ra --strict-markers --cov=urdu_deepfake.audio_ingestion --cov-report
 
 [tool.ruff]
 line-length = 100
-target-version = "py311"
+target-version = "py312"
 
 [tool.mypy]
-python_version = "3.11"
+python_version = "3.12"
 strict = true
+packages = ["urdu_deepfake"]
 
 [[tool.mypy.overrides]]
 module = ["sounddevice", "soundfile"]
 ignore_missing_imports = true
-packages = ["urdu_deepfake"]
