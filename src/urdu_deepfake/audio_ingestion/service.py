@@ -14,9 +14,14 @@ from .quality import assess_quality
 
 
 class AudioIngestionService:
-    """Application-facing facade for both supported input paths."""
+    """Application-facing facade for all supported audio input paths."""
 
-    def __init__(self, config: IngestionConfig | None = None) -> None:
+    def __init__(
+        self,
+        config: IngestionConfig | None = None,
+    ) -> None:
+        """Create the service with audio-quality configuration."""
+
         self.config = config or IngestionConfig()
 
     def from_upload(
@@ -26,12 +31,41 @@ class AudioIngestionService:
         filename: str,
         reject_low_quality: bool = True,
     ) -> AudioInput:
-        samples, sample_rate, original_format = decode_audio(source, filename=filename)
+        """Create an AudioInput from an uploaded audio file."""
+
+        samples, sample_rate, original_format = decode_audio(
+            source,
+            filename=filename,
+        )
+
         return self._build(
             samples=samples,
             sample_rate=sample_rate,
             source=AudioSource.UPLOAD,
             original_name=filename,
+            original_format=original_format,
+            reject_low_quality=reject_low_quality,
+        )
+
+    def from_microphone_file(
+        self,
+        source: bytes | BinaryIO,
+        *,
+        filename: str = "microphone.wav",
+        reject_low_quality: bool = True,
+    ) -> AudioInput:
+        """Create an AudioInput from browser-recorded microphone audio."""
+
+        samples, sample_rate, original_format = decode_audio(
+            source,
+            filename=filename,
+        )
+
+        return self._build(
+            samples=samples,
+            sample_rate=sample_rate,
+            source=AudioSource.MICROPHONE,
+            original_name=None,
             original_format=original_format,
             reject_low_quality=reject_low_quality,
         )
@@ -43,8 +77,13 @@ class AudioIngestionService:
         sample_rate: int,
         reject_low_quality: bool = True,
     ) -> AudioInput:
+        """Create an AudioInput from a raw microphone sample buffer."""
+
         return self._build(
-            samples=np.asarray(samples, dtype=np.float32),
+            samples=np.asarray(
+                samples,
+                dtype=np.float32,
+            ),
             sample_rate=sample_rate,
             source=AudioSource.MICROPHONE,
             original_name=None,
@@ -62,9 +101,18 @@ class AudioIngestionService:
         original_format: str,
         reject_low_quality: bool,
     ) -> AudioInput:
-        quality = assess_quality(samples, sample_rate, self.config)
+        """Validate audio and build the common AudioInput interface."""
+
+        quality = assess_quality(
+            samples,
+            sample_rate,
+            self.config,
+        )
+
         if reject_low_quality and not quality.is_acceptable:
-            raise AudioQualityError(" ".join(quality.rejection_reasons))
+            raise AudioQualityError(
+                " ".join(quality.rejection_reasons)
+            )
 
         return AudioInput(
             samples=samples,
