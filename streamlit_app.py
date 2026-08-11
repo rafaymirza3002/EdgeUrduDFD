@@ -1,13 +1,11 @@
 from __future__ import annotations
 
 from dataclasses import asdict
-from typing import Any
 
 import streamlit as st
 
 from urdu_deepfake.audio_ingestion import AudioIngestionService
 from urdu_deepfake.audio_ingestion.exceptions import AudioIngestionError
-
 
 st.set_page_config(
     page_title="Urdu Deepfake Audio Detector",
@@ -16,47 +14,14 @@ st.set_page_config(
 )
 
 st.title("Urdu Deepfake Audio Detector")
+
 st.caption(
-    "Module 2 prototype: local dual-mode audio ingestion and quality assurance"
+    "Module 2 prototype: local dual-mode audio ingestion "
+    "and quality assurance"
 )
 
+
 service = AudioIngestionService()
-
-
-def display_audio_result(item: Any, success_message: str) -> None:
-    """Display the standardized AudioInput result returned by Module 2."""
-
-    st.success(success_message)
-
-    duration_seconds = len(item.samples) / item.sample_rate
-
-    st.subheader("Audio information")
-
-    col1, col2 = st.columns(2)
-
-    with col1:
-        st.metric("Sample rate", f"{item.sample_rate:,} Hz")
-        st.metric("Duration", f"{duration_seconds:.2f} seconds")
-
-    with col2:
-        source_value = getattr(item.source, "value", str(item.source))
-
-        st.metric("Source", source_value)
-        st.metric("Format", item.original_format.upper())
-
-    if item.original_name is not None:
-        st.write("**Original name:**", item.original_name)
-    else:
-        st.write("**Original name:** Browser microphone recording")
-
-    st.write("**Waveform shape:**", str(item.samples.shape))
-    st.write("**Waveform data type:**", str(item.samples.dtype))
-
-    st.subheader("Quality report")
-
-    # QualityReport is a slotted dataclass, so it does not have __dict__.
-    # asdict() safely converts it into a dictionary for Streamlit.
-    st.json(asdict(item.quality))
 
 
 record_tab, upload_tab = st.tabs(
@@ -74,28 +39,66 @@ with record_tab:
 
     if recorded_audio is not None:
         try:
-            item = service.from_bytes(
-                recorded_audio.getvalue(),
-                original_name=getattr(
-                    recorded_audio,
-                    "name",
-                    "microphone_recording.wav",
-                ),
-                source="microphone",
+            audio_bytes = recorded_audio.getvalue()
+
+            item = service.from_microphone_file(
+                audio_bytes,
+                filename=recorded_audio.name or "microphone.wav",
             )
 
-            st.audio(recorded_audio.getvalue())
+            st.audio(audio_bytes)
 
-            display_audio_result(
-                item,
-                "Microphone recording accepted.",
+            st.success("Microphone recording accepted.")
+
+            duration_seconds = (
+                len(item.samples) / item.sample_rate
             )
+
+            st.subheader("Audio information")
+
+            st.write(
+                "**Source:**",
+                item.source.value,
+            )
+
+            st.write(
+                "**Sample rate:**",
+                f"{item.sample_rate:,} Hz",
+            )
+
+            st.write(
+                "**Duration:**",
+                f"{duration_seconds:.2f} seconds",
+            )
+
+            st.write(
+                "**Original format:**",
+                item.original_format,
+            )
+
+            st.write(
+                "**Original name:**",
+                item.original_name,
+            )
+
+            st.write(
+                "**Waveform shape:**",
+                str(item.samples.shape),
+            )
+
+            st.write(
+                "**Waveform dtype:**",
+                str(item.samples.dtype),
+            )
+
+            st.subheader("Quality report")
+
+            st.json(asdict(item.quality))
 
         except AudioIngestionError as exc:
-            st.error(str(exc))
-
-        except Exception as exc:
-            st.exception(exc)
+            st.error(
+                f"Microphone recording rejected: {exc}"
+            )
 
 
 with upload_tab:
@@ -108,21 +111,61 @@ with upload_tab:
         try:
             audio_bytes = uploaded_audio.getvalue()
 
-            item = service.from_bytes(
+            item = service.from_upload(
                 audio_bytes,
-                original_name=uploaded_audio.name,
-                source="file",
+                filename=uploaded_audio.name,
             )
 
             st.audio(audio_bytes)
 
-            display_audio_result(
-                item,
-                "Uploaded recording accepted.",
+            st.success("Uploaded recording accepted.")
+
+            duration_seconds = (
+                len(item.samples) / item.sample_rate
             )
 
-        except AudioIngestionError as exc:
-            st.error(str(exc))
+            st.subheader("Audio information")
 
-        except Exception as exc:
-            st.exception(exc)
+            st.write(
+                "**Source:**",
+                item.source.value,
+            )
+
+            st.write(
+                "**Sample rate:**",
+                f"{item.sample_rate:,} Hz",
+            )
+
+            st.write(
+                "**Duration:**",
+                f"{duration_seconds:.2f} seconds",
+            )
+
+            st.write(
+                "**Original format:**",
+                item.original_format,
+            )
+
+            st.write(
+                "**Original name:**",
+                item.original_name,
+            )
+
+            st.write(
+                "**Waveform shape:**",
+                str(item.samples.shape),
+            )
+
+            st.write(
+                "**Waveform dtype:**",
+                str(item.samples.dtype),
+            )
+
+            st.subheader("Quality report")
+
+            st.json(asdict(item.quality))
+
+        except AudioIngestionError as exc:
+            st.error(
+                f"Uploaded recording rejected: {exc}"
+            )
